@@ -86,7 +86,8 @@
       const form = document.getElementById('form');
       const input = document.getElementById('input');
       const messages = document.getElementById('messages');
-
+      var allowed=false;
+      var allowAccess;
       let name = '';
       while (!name) {
         name = prompt('Please enter your name:');
@@ -108,16 +109,15 @@
     messageContent.innerHTML = `<strong>${data.name}</strong>: ${data.message}`;
     senderName=data.name
     
-    // Add a click event listener to the message content
     messageContent.addEventListener('click', () => {
-        // Do something when the message is clicked
+       
         console.log(`Message "${data.message}" clicked!`);
     });
 
-    // Append the message content to the list item
+
     item.appendChild(messageContent);
 
-    // Append the list item to the messages list
+   
     messages.appendChild(item);
     messages.scrollTop = messages.scrollHeight;
 });
@@ -131,11 +131,19 @@
 
   startButton.addEventListener('click', async () => {
     try {
+      if(allowed==false){
+     allowAccess = confirm("Do you want to allow access to your microphone and speaker?");
+    }
+      if(allowAccess)
+
+      {
+      allowed=true;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       startRecording(stream);
       startButton.disabled = true;
       stopButton.disabled = false;
-      // Send message to the chat indicating recording has started
+      
       socket.emit('chat message', { name: `${name}`, message: 'Recording audio...' });
     } catch (err) {
       console.error('Error accessing microphone:', err);
@@ -146,7 +154,7 @@
     stopRecording();
     startButton.disabled = false;
     stopButton.disabled = true;
-    // Send message to the chat indicating recording has stopped
+    
     socket.emit('chat message', { name: `${name}`, message: 'Sent an Audio recording.' });
   });
 
@@ -173,14 +181,13 @@
     }
   }
 
-  let allowed=false;
-  let allowAccess;
+  ''
   socket.on('audio',async (data) => {
-    // Convert base64 audio data to a blob
+    
     const blob = base64ToBlob(data.audio, 'audio/wav');
     const audioURL = URL.createObjectURL(blob);
 
-    // Create an <audio> element to play the audio
+    
     const audioElement = new Audio(audioURL);
     if(allowed==false){
      allowAccess = confirm("Do you want to allow access to your microphone and speaker?");
@@ -196,7 +203,7 @@
 }
   });
 
-  // Function to convert base64 data to a blob
+  
   function base64ToBlob(base64Data, contentType) {
     const sliceSize = 1024;
     const byteCharacters = atob(base64Data);
@@ -217,7 +224,7 @@
     return new Blob(byteArrays, { type: contentType });
   }
         
-        // Display a message in the chat indicating that audio is received
+        
         
     </script>
   </body>
