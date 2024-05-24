@@ -86,9 +86,16 @@
       const form = document.getElementById('form');
       const input = document.getElementById('input');
       const messages = document.getElementById('messages');
-      var allowed=false;
-      var allowAccess;
+      const startButton = document.getElementById('start');
+      const stopButton = document.getElementById('stop');
+
+      let allowed = false;
+      let allowAccess;
       let name = '';
+      let CurrAudio = null;
+      let mediaRecorder;
+      let recordedChunks = [];
+
       while (!name) {
         name = prompt('Please enter your name:');
       }
@@ -102,130 +109,119 @@
           input.value = '';
         }
       });
-      var senderName;
+
       socket.on('chat message', (data) => {
-    const item = document.createElement('li');
-    const messageContent = document.createElement('span');
-    messageContent.innerHTML = `<strong>${data.name}</strong>: ${data.message}`;
-    senderName=data.name
-    
-    messageContent.addEventListener('click', () => {
-       
-        console.log(`Message "${data.message}" clicked!`);
-    });
+        const item = document.createElement('li');
+        const messageContent = document.createElement('span');
+        messageContent.innerHTML = `<strong>${data.name}</strong>: ${data.message}`;
+        item.appendChild(messageContent);
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+      });
 
+      socket.on('audio', async (data) => {
+        const blob = base64ToBlob(data.audio, 'audio/wav');
+        const audioURL = URL.createObjectURL(blob);
+        const audioElement = new Audio(audioURL);
 
-    item.appendChild(messageContent);
+        if (CurrAudio) {
+          CurrAudio.pause();
+          CurrAudio = null;
+        }
 
-   
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
-});
+        CurrAudio = audioElement;
 
-    
-      let mediaRecorder;
-  let recordedChunks = [];
+        const item = document.createElement('li');
+        const messageContent = document.createElement('span');
+        messageContent.innerHTML = `<strong>${data.name}</strong>: Sent an Audio recording.`;
+        messageContent.addEventListener('click', () => {
+          if (CurrAudio.paused) {
+            CurrAudio.play();
+          } else {
+            CurrAudio.pause();
+          }
+        });
 
-  const startButton = document.getElementById('start');
-  const stopButton = document.getElementById('stop');
+        item.appendChild(messageContent);
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
 
-  startButton.addEventListener('click', async () => {
-    try {
-      if(allowed==false){
-     allowAccess = confirm("Do you want to allow access to your microphone and speaker?");
-    }
-      if(allowAccess)
+        if (!allowed) {
+          allowAccess = confirm("Do you want to allow access to your microphone and speaker?");
+          allowed = allowAccess;
+        }
 
-      {
-      allowed=true;
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      startRecording(stream);
-      startButton.disabled = true;
-      stopButton.disabled = false;
-      
-      socket.emit('chat message', { name: `${name}`, message: 'Recording audio...' });
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-    }
-  });
+        if (allowed) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+      });
 
-  stopButton.addEventListener('click', () => {
-    stopRecording();
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    
-    socket.emit('chat message', { name: `${name}`, message: 'Sent an Audio recording.' });
-  });
+      startButton.addEventListener('click', async () => {
+        try {
+          if (!allowed) {
+            allowAccess = confirm("Do you want to allow access to your microphone and speaker?");
+            allowed = allowAccess;
+          }
+          if (allowed) {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            startRecording(stream);
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            socket.emit('chat message', { name: name, message: 'Recording audio...' });
+          }
+        } catch (err) {
+          console.error('Error accessing microphone:', err);
+        }
+      });
 
-  function startRecording(stream) {
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = handleDataAvailable;
-    mediaRecorder.start();
-  }
+      stopButton.addEventListener('click', () => {
+        stopRecording();
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        // socket.emit('chat message', { name: name, message: 'Sent an Audio recording.' });
+      });
 
-  function stopRecording() {
-    mediaRecorder.stop();
-  }
-
-  function handleDataAvailable(event) {
-    recordedChunks.push(event.data);
-    if (mediaRecorder.state === 'inactive') {
-      const blob = new Blob(recordedChunks, { type: 'audio/wav' });
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = () => {
-        const base64data = reader.result.split(',')[1];
-        socket.emit('audio', { name: name, audio: base64data });
-      };
-    }
-  }
-
-  ''
-  socket.on('audio',async (data) => {
-    
-    const blob = base64ToBlob(data.audio, 'audio/wav');
-    const audioURL = URL.createObjectURL(blob);
-
-    
-    const audioElement = new Audio(audioURL);
-    if(allowed==false){
-     allowAccess = confirm("Do you want to allow access to your microphone and speaker?");
-    }
-      if(allowAccess)
-
-      {
-      allowed=true;
-  
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if(name!==senderName)
-    audioElement.play();
-}
-  });
-
-  
-  function base64ToBlob(base64Data, contentType) {
-    const sliceSize = 1024;
-    const byteCharacters = atob(base64Data);
-    const byteArrays = [];
-
-    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-      const slice = byteCharacters.slice(offset, offset + sliceSize);
-
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
+      function startRecording(stream) {
+        recordedChunks = [];  // Clear the recorded chunks
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = handleDataAvailable;
+        mediaRecorder.start();
       }
 
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-    }
+      function stopRecording() {
+        mediaRecorder.stop();
+      }
 
-    return new Blob(byteArrays, { type: contentType });
-  }
-        
-        
-        
+      function handleDataAvailable(event) {
+        recordedChunks.push(event.data);
+        if (mediaRecorder.state === 'inactive') {
+          const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onloadend = () => {
+            const base64data = reader.result.split(',')[1];
+            socket.emit('audio', { name: name, audio: base64data });
+          };
+        }
+      }
+
+      function base64ToBlob(base64Data, contentType) {
+        const sliceSize = 1024;
+        const byteCharacters = atob(base64Data);
+        const byteArrays = [];
+
+        for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+          const slice = byteCharacters.slice(offset, offset + sliceSize);
+          const byteNumbers = new Array(slice.length);
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+
+        return new Blob(byteArrays, { type: contentType });
+      }
     </script>
   </body>
 </html>
