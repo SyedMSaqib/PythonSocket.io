@@ -54,6 +54,7 @@
         padding: 1rem;
         overflow-y: auto;
         max-height: calc(100vh - 3.5rem);
+        
       }
       #messages > li {
         padding: 0.75rem 1rem;
@@ -61,14 +62,52 @@
         background: #fff;
         border-radius: 5px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        
       }
       #messages > li:nth-child(odd) {
         background: #f9f9f9;
+        cursor: pointer;
       }
       #messages > li > strong {
         font-weight: bold;
         color: #333;
+        
+
       }
+      button {
+            font-size: 16px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #start {
+            background-color: #4CAF50; /* Green */
+            color: white;
+        }
+
+        #start:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        #stop {
+            background-color: #f44336; /* Red */
+            color: white;
+        }
+
+        #stop:hover {
+            background-color: #e53935;
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            background-color: #cccccc; /* Gray */
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
   </head>
   <body>
@@ -182,7 +221,7 @@
       });
 
       function startRecording(stream) {
-        recordedChunks = [];  // Clear the recorded chunks
+        recordedChunks = [];  
         mediaRecorder = new MediaRecorder(stream);
         mediaRecorder.ondataavailable = handleDataAvailable;
         mediaRecorder.start();
