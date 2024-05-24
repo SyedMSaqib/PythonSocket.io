@@ -101,11 +101,12 @@
           input.value = '';
         }
       });
-
+      var senderName;
       socket.on('chat message', (data) => {
     const item = document.createElement('li');
     const messageContent = document.createElement('span');
     messageContent.innerHTML = `<strong>${data.name}</strong>: ${data.message}`;
+    senderName=data.name
     
     // Add a click event listener to the message content
     messageContent.addEventListener('click', () => {
@@ -190,6 +191,7 @@
       allowed=true;
   
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if(name!==senderName)
     audioElement.play();
 }
   });
