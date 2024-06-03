@@ -122,7 +122,7 @@ function base64ToBlob(base64Data) {
         }
       }
 
-      // Transmit audio data over the socket
+     
       setInterval(() => {
         if (audioStream) {
           const recorder = new MediaRecorder(audioStream);
@@ -134,14 +134,14 @@ function base64ToBlob(base64Data) {
           recorder.onstop = () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             socket.emit("audio", audioBlob);
-            audioChunks.length = 0; // Clear the chunks array for the next recording
+            audioChunks.length = 0; 
           };
           recorder.start();
           setTimeout(() => {
             recorder.stop();
-          }, 2000); // Adjust the duration of each recording as needed
+          }, 2000); 
         }
-      }, 500); // Adjust the interval for sending audio data over the socket as needed
+      }, 500); 
     </script>
   </body>
 </html>
