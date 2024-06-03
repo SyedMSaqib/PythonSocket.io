@@ -30,5 +30,5 @@ def handle_audio(blob_data):
 
 
 if __name__ == '__main__':
-    socketio.run(app,host='192.168.10.12'  ,port=3000, allow_unsafe_werkzeug=True)
+    socketio.run(app  ,port=3000, allow_unsafe_werkzeug=True)
 # ,
