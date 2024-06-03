@@ -19,16 +19,15 @@ def handle_user_joined(username):
     message = {'name': 'System', 'message': f'{username} has joined the chat'}
     socketio.emit('chat message', message)
 
-
 @socketio.on('audio')
 def handle_audio(blob_data):
     print('Audio received')
+    # Base64 encode the binary data
     encoded_audio = base64.b64encode(blob_data)
+    # Convert the encoded audio bytes to a string for transmission
     encoded_audio_str = encoded_audio.decode('utf-8')
-    print(encoded_audio_str)
+    # Send the encoded audio string over the socket
     emit('audio', encoded_audio_str, broadcast=True)
 
-
 if __name__ == '__main__':
-    socketio.run(app  ,port=3000, allow_unsafe_werkzeug=True)
-# ,
+    socketio.run(app, port=3000, allow_unsafe_werkzeug=True)

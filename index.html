@@ -30,10 +30,8 @@
       let allowed = false
       let allowAccess
       let name = ""
-      let mediaRecorder
-      let audioStream
-      let audioChunks = []
-      let recordingInterval
+      let audioStream;
+      const audioChunks = [];
 
       while (!name) {
         name = prompt("Please enter your name:")
@@ -65,11 +63,7 @@
             allowed = allowAccess
           }
           if (allowed) {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            audioStream = stream
-            
-            startRecordingLoop()
-            
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true })
             startButton.disabled = true
             stopButton.disabled = false
             socket.emit("chat message", { name: name, message: "Recording audio..." })
@@ -80,57 +74,40 @@
       })
 
       stopButton.addEventListener("click", () => {
-        clearInterval(recordingInterval)
         stopRecording()
         startButton.disabled = false
         stopButton.disabled = true
         socket.emit("chat message", { name: name, message: "Stopped recording audio." })
       })
 
-      function startRecordingLoop() {
-        startRecording(audioStream)
-        recordingInterval = setInterval(() => {
-          stopRecording()
-          setTimeout(() => {
-            startRecording(audioStream)
-          }, 0)
-        }, 5000)
-      }
-
-      function startRecording(stream) {
-        mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
-        mediaRecorder.ondataavailable = handleDataAvailable
-        mediaRecorder.start()
-      }
-
-      function handleDataAvailable(event) {
-        if (event.data.size > 0) {
-          const audioBlob = new Blob([event.data], { type: "audio/webm" })
-          socket.emit("audio", audioBlob)
-        }
-      }
-
       function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state !== "inactive") {
-          mediaRecorder.stop()
+        if (audioStream) {
+          audioStream.getTracks().forEach(track => track.stop());
         }
       }
 
       socket.on("audio", async (data) => {
-        console.log("Audio received")
-        try {
-          const binaryData = atob(data)
-          const bytes = new Uint8Array(binaryData.length)
-          for (let i = 0; i < binaryData.length; i++) {
-            bytes[i] = binaryData.charCodeAt(i)
-          }
-          const audioBlob = new Blob([bytes], { type: "audio/webm" })
-          const audioUrl = URL.createObjectURL(audioBlob)
-          await playAudio(audioUrl)
-        } catch (e) {
-          console.error("Error playing audio:", e)
-        }
-      })
+    console.log("Audio received");
+    try {
+        const blob = base64ToBlob(data);
+        const audioUrl = URL.createObjectURL(blob);
+        await playAudio(audioUrl);
+    } catch (e) {
+        console.error("Error playing audio:", e);
+    }
+});
+
+function base64ToBlob(base64Data) {
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: 'audio/webm' });
+}
+
+
 
       async function playAudio(audioUrl) {
         try {
@@ -144,6 +121,27 @@
           console.error("Error creating audio element:", error)
         }
       }
+
+      // Transmit audio data over the socket
+      setInterval(() => {
+        if (audioStream) {
+          const recorder = new MediaRecorder(audioStream);
+          recorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              audioChunks.push(event.data);
+            }
+          };
+          recorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            socket.emit("audio", audioBlob);
+            audioChunks.length = 0; // Clear the chunks array for the next recording
+          };
+          recorder.start();
+          setTimeout(() => {
+            recorder.stop();
+          }, 2000); // Adjust the duration of each recording as needed
+        }
+      }, 500); // Adjust the interval for sending audio data over the socket as needed
     </script>
   </body>
 </html>
