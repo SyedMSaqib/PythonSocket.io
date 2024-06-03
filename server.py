@@ -1,5 +1,6 @@
 from flask import Flask, send_from_directory
 from flask_socketio import SocketIO, emit
+import base64
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -18,11 +19,16 @@ def handle_user_joined(username):
     message = {'name': 'System', 'message': f'{username} has joined the chat'}
     socketio.emit('chat message', message)
 
+
 @socketio.on('audio')
-def handle_audio(data):
-    socketio.emit('audio', data)
+def handle_audio(blob_data):
+    print('Audio received')
+    encoded_audio = base64.b64encode(blob_data)
+    encoded_audio_str = encoded_audio.decode('utf-8')
+    print(encoded_audio_str)
+    emit('audio', encoded_audio_str, broadcast=True)
 
 
 if __name__ == '__main__':
-    socketio.run(app,  port=3000, allow_unsafe_werkzeug=True)
-# ,host='192.168.10.12'
+    socketio.run(app,host='192.168.10.12'  ,port=3000, allow_unsafe_werkzeug=True)
+# ,
